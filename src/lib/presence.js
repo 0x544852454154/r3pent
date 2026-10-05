@@ -1,17 +1,26 @@
 /**
  * Lanyard presence feed (REST snapshot + websocket deltas).
  *
- * Both URLs are required and arrive from the server-injected config block, so
- * the shipped bundle carries neither the upstream host nor our own endpoint
- * path. There is deliberately no fallback: a hardcoded default would be a
- * literal in the bundle and would silently bypass the proxy when it was wrong.
+ * `restBase` / `socketUrl` come from the server-injected config block when
+ * server/serve.mjs is serving the page, which keeps the upstream host out of the
+ * bundle. When that block is absent - a static host, or `vite preview` - we fall
+ * back to our own origin, so a deployment that reverse-proxies /api still gets
+ * avatars, decorations and live activity. VITE_PRESENCE_BASE / VITE_SOCKET_URL
+ * remain the escape hatch for a genuinely static host with no /api at all.
  */
 const RECONNECT_MS = 3000
 const MAX_ATTEMPTS = 3
 
+function sameOriginSocket() {
+  if (typeof location === 'undefined') return ''
+  const scheme = location.protocol === 'https:' ? 'wss' : 'ws'
+  return `${scheme}://${location.host}/api/socket`
+}
+
 export function subscribePresence(ids, options = {}) {
-  const { onUpdate, onError, restBase, socketUrl, token = '' } = options
-  if (!restBase || !socketUrl) return undefined
+  const { onUpdate, onError, token = '' } = options
+  const restBase = options.restBase || '/api/presence'
+  const endpoint = options.socketUrl || sameOriginSocket()
   const headers = { accept: 'application/json', 'x-k': token }
   const timers = new Set()
   let socket = null
@@ -51,9 +60,11 @@ export function subscribePresence(ids, options = {}) {
   }
 
   const connect = () => {
-    if (stopped) return
+    // no socket endpoint (no location, or nothing configured): the REST snapshot
+    // above still populates avatars and decorations, we just lose live updates
+    if (stopped || !endpoint) return
     try {
-      socket = new WebSocket(socketUrl)
+      socket = new WebSocket(endpoint)
     } catch {
       later(connect, RECONNECT_MS)
       return

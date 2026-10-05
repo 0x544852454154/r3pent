@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build && node scripts/obfuscate.mjs",
     "build:plain": "vite build",
-    "preview": "vite preview",
+    "preview": "node server/serve.mjs",
     "serve": "node server/serve.mjs",
     "start": "npm run build && npm run serve",
     "verify": "node scripts/verify-build.mjs"

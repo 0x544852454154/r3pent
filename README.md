@@ -14,6 +14,11 @@ npm run serve      # serve dist/ with the API proxy + headers (PORT=8080)
 npm start          # build then serve
 ```
 
+Use `npm run serve` (or `npm run preview`, which is the same thing) rather than
+`vite preview`: `vite preview` serves `dist/` as plain static files with no API
+and no injected config, so the roster cannot load and the page shows
+"roster unavailable".
+
 ## Layout
 
 | Path | What it is |
@@ -51,13 +56,19 @@ real and testable:
   alone by default (`--all` to include it) — it is public library code.
 - The HTML ships zero inline `<script>` and zero comments, so a strict CSP works
   without `unsafe-inline` and there is no note-to-visitors left in the markup.
-- No endpoint path and no upstream host is a literal anywhere in the production
-  JS: `/api/roster`, `/api/socket`, `/api/presence`, `site-config` and
-  `lanyard.rest` are all absent, because they are injected by the server at
-  request time. The dev fallbacks sit behind `import.meta.env.DEV`, which folds
-  to `false` and lets terser delete them.
+- The upstream presence host is not a literal anywhere in the production JS:
+  `lanyard.rest` only exists behind `import.meta.env.DEV` and `VITE_PRESENCE_BASE`,
+  both of which fold away by default, so a default build ships no third-party
+  host. Verified: `lanyard.rest` absent from `dist/`.
+- The client *does* know its own paths (`/api/roster`, `/api/presence`,
+  `/api/socket`) as relative fallbacks, because it has to fetch them from
+  somewhere. Obscuring a same-origin path is worth nothing — it is in the network
+  tab for anyone who opens devtools — and the roster route is protected by the
+  token gate and rate limiting, which is the actual control. An earlier version
+  stripped those fallbacks to keep them out of the bundle; that bought nothing and
+  broke every static deployment, so it was reverted.
 - `npm run verify` fails the build on: source maps, inline scripts, comments in
-  any emitted chunk, an HTML comment, the endpoint paths, `lanyard.rest`,
+  any emitted chunk, an HTML comment, `lanyard.rest`, `discordapp.com`,
   `getSupportedFormat`, `MANUAL_FILTERING`, the braille ramp, the roster handle
   and the Discord id. Run it after any build change.
 

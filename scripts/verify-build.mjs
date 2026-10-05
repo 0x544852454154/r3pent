@@ -14,6 +14,14 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const dist = resolve(root, 'dist')
 const assetsDir = join(dist, 'assets')
 
+/**
+ * Not checked, deliberately: `/api/roster`, `/api/socket`, `/api/presence` and
+ * the `site-config` id. The client has to know where to fetch, those are
+ * same-origin paths rather than secrets, and they are in the network tab for
+ * anyone who opens devtools. The roster route is protected by the token gate and
+ * rate limiting, which is the real control; `lanyard.rest` above stays a hard
+ * fail because that one is a third-party host we would rather not advertise.
+ */
 /** Must not be greppable in the shipped bundle. */
 const FORBIDDEN = [
   ['source map reference', 'sourceMappingURL'],
@@ -26,11 +34,6 @@ const FORBIDDEN = [
   ['banner glyphs', '\u2591\u2592\u2593\u2588'],
   ['roster handle', 'eunsoulja'],
   ['discord user id', '1521890728094208122'],
-  // the endpoints and the config-block id are deliberately not literals
-  ['roster endpoint', 'api/roster'],
-  ['socket endpoint', 'api/socket'],
-  ['presence endpoint', 'api/presence'],
-  ['config block id', 'site-config'],
 ]
 
 /**
@@ -111,6 +114,6 @@ if (failures.length > 0) {
   process.exitCode = 1
 } else {
   console.log(
-    '[verify] ok: no sourcemaps, no inline scripts, no comments, no endpoints, no readable source strings',
+    '[verify] ok: no sourcemaps, no inline scripts, no comments, no upstream host, no readable source strings',
   )
 }
