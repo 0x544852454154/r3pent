@@ -27,7 +27,10 @@
 
 const DEVTOOLS_PX = 160
 const DEVTOOLS_STRIKES = 3
-const DEVTOOLS_POLL_MS = 700
+// 3 strikes x 450ms ~= 1.35s from "devtools docked" to "screen covered". The
+// strike count is what protects against a false positive on high zoom, so the
+// interval is what got tightened rather than the threshold.
+const DEVTOOLS_POLL_MS = 450
 const VEIL_ID = 'guard-veil'
 
 const EDITABLE = /^(input|textarea|select)$/i
@@ -35,14 +38,40 @@ const EDITABLE = /^(input|textarea|select)$/i
 const isEditable = (target) =>
   !!target && (target.isContentEditable || EDITABLE.test(target.tagName || ''))
 
+/**
+ * What actually got installed, and why not. Exported so it can be read from the
+ * console instead of guessed at - `__repentGuards` is put on `window` in dev.
+ * Object keys, so it survives obfuscation as a readable literal.
+ */
+export const GUARD_STATE = {
+  PROD: import.meta.env.PROD,
+  menu: false,
+  clipboard: false,
+  shortcuts: false,
+  veil: false,
+  skipped: '',
+}
+
 export function installGuards() {
-  if (!import.meta.env.PROD) return
-  if (import.meta.env.VITE_GUARD === '0') return
+  if (!import.meta.env.PROD) {
+    GUARD_STATE.skipped = 'not a production build'
+    return
+  }
+  if (import.meta.env.VITE_GUARD === '0') {
+    GUARD_STATE.skipped = 'VITE_GUARD=0'
+    return
+  }
 
   installClipboardGuards()
+  GUARD_STATE.clipboard = true
   installMenuGuards()
+  GUARD_STATE.menu = true
   installShortcutGuards()
-  if (import.meta.env.VITE_GUARD_VEIL !== '0') installDevtoolsVeil()
+  GUARD_STATE.shortcuts = true
+  if (import.meta.env.VITE_GUARD_VEIL !== '0') {
+    installDevtoolsVeil()
+    GUARD_STATE.veil = true
+  }
 }
 
 /**

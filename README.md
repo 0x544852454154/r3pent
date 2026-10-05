@@ -89,8 +89,13 @@ real and testable:
 
 **Runtime deterrences (`src/lib/protect.js`, production only)**
 - Right-click, F12, `ctrl/cmd+U`, `ctrl/cmd+P`, `ctrl/cmd+shift+I/J/C`, copy/cut,
-  drag and text selection are blocked, and the screen is covered while devtools
-  looks docked. Opt out with `VITE_GUARD=0`.
+  drag and text selection are blocked, and the screen is covered within ~1.4 s
+  while devtools looks docked. **Right-click and inspect-element work normally
+  under `npm run dev`** — that is the "developer mode" escape, and it is keyed off
+  the build, not off a runtime check. A second escape is `VITE_GUARD=0`, and
+  `VITE_GUARD_VEIL=0` keeps the shortcut blocks but drops the veil.
+- To confirm what actually installed instead of guessing, `window.__repentGuards`
+  is exposed in dev: `{ PROD, menu, clipboard, shortcuts, veil, skipped }`.
 - Deliberately *not* implemented: `debugger` traps, devtools-size polling on a
   tight loop, right-click replacement menus. They break real debugging,
   false-positive on resized windows, are defeated by one click in devtools, and
@@ -143,12 +148,18 @@ VITE_SOCKET_URL=wss://api.lanyard.rest/socket \
 npm run build
 ```
 
-Minification, mangling, obfuscation and the key guard still apply; only the
-server-side pieces are lost, so the roster is baked into the JS and the token
-gate and presence allowlist do not exist. Copy the CSP from `server/serve.mjs`
-into your host's header config, adding the upstream hosts to `connect-src` and
-setting `CSP_UPSTREAM=1` on the server side if you keep using it — the browser
-has to be allowed to reach the presence API directly there.
+`VITE_PRESENCE_BASE` and `VITE_SOCKET_URL` are load-bearing here: the server
+injects nothing on a static host, so without them there is no presence feed at
+all, which shows up as every member stuck on the generic Discord avatar with no
+avatar decoration. Minification, mangling, obfuscation and the key guard still
+apply; only the server-side pieces are lost, so the roster is baked into the JS
+and the token gate and presence allowlist do not exist. Copy the CSP from
+`server/serve.mjs` into your host's header config, adding the upstream hosts to
+`connect-src` and setting `CSP_UPSTREAM=1` on the server side if you keep using
+it — the browser has to be allowed to reach the presence API directly there.
+
+A static host *can* also run `server/serve.mjs` (any VPS); that is what gets you
+the roster and token protections.
 
 ## Notes
 
