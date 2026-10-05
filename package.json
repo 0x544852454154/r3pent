@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build && node scripts/obfuscate.mjs",
     "build:plain": "vite build",
+    "build:static": "VITE_BUNDLE_ROSTER=1 VITE_PRESENCE_BASE=https://api.lanyard.rest/v1/users VITE_SOCKET_URL=wss://api.lanyard.rest/socket vite build && node scripts/obfuscate.mjs",
     "preview": "node server/serve.mjs",
     "serve": "node server/serve.mjs",
     "start": "npm run build && npm run serve",

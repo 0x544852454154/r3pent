@@ -320,7 +320,10 @@ function handleApi(req, res, url, ip) {
   }
   if (fetchBlocked(req)) return sendJson(res, req, 403, { error: 'forbidden' })
 
-  if (url.pathname === ROSTER_PATH) {
+  // some proxies normalise /api/roster to /api/roster/; do not 404 on that
+  const route = url.pathname.replace(/\/+$/, '') || '/'
+
+  if (route === ROSTER_PATH) {
     if (rateLimited(rosterHits, ip, ROSTER_LIMIT)) {
       return sendJson(res, req, 429, { error: 'rate limited' })
     }
@@ -330,10 +333,11 @@ function handleApi(req, res, url, ip) {
     return sendJson(res, req, 200, ROLES, { 'cache-control': 'private, no-store' })
   }
 
-  if (url.pathname.startsWith(PRESENCE_PREFIX)) {
+  const presenceBase = PRESENCE_PREFIX.replace(/\/$/, '')
+  if (route.startsWith(presenceBase)) {
     if (rateLimited(hits, ip, RATE_LIMIT)) return sendJson(res, req, 429, { error: 'rate limited' })
     if (!tokenValid(req.headers['x-k'])) return sendJson(res, req, 403, { error: 'forbidden' })
-    const id = url.pathname.slice(PRESENCE_PREFIX.length)
+    const id = route.slice(presenceBase.length).replace(/^\//, '')
     // only ids we already know: an unscoped numeric id turns this origin into a
     // free "what is this Discord account doing" oracle and fills the cache with
     // junk. Unknown ids answer exactly like a bad route, so there is no signal
