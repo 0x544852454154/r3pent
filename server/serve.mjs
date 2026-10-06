@@ -470,12 +470,19 @@ server.on('upgrade', (req, socket, head) => {
           head2.push(`Host: ${target.host}`)
           continue
         }
-        // hop-by-hop headers are per-connection, not per-proxy
-        if (['connection', 'upgrade', 'sec-websocket-key', 'sec-websocket-version', 'sec-websocket-extensions', 'origin'].includes(name.toLowerCase())) {
+        // hop-by-hop framing headers are re-set below; everything the WebSocket
+        // handshake needs (Sec-WebSocket-Key, -Version, -Protocol, -Extensions)
+        // MUST be forwarded or the upstream answers a plain GET with 400
+        if (['connection', 'upgrade'].includes(name.toLowerCase())) {
+          continue
+        }
+        if (name.toLowerCase() === 'origin') {
+          head2.push(`Origin: ${target.origin}`)
           continue
         }
         head2.push(`${name}: ${value}`)
       }
+      head2.push('Connection: Upgrade', 'Upgrade: websocket')
       upstream.write(`${head2.join('\r\n')}\r\n\r\n`)
       if (head && head.length) upstream.write(head)
       socket.pipe(upstream)

@@ -45,8 +45,11 @@ export function subscribePresence(ids, options = {}) {
       .then((payload) => {
         inFlight.delete(id)
         if (stopped) return
-        if (payload && payload.success && payload.data) {
-          onUpdate(payload.data)
+        // our own /api/presence proxy answers with the bare Lanyard data object;
+        // a direct Lanyard base answers {success, data}. Accept both.
+        const data = payload && payload.success && payload.data ? payload.data : payload
+        if (data && data.discord_user) {
+          onUpdate(data)
           return
         }
         throw new Error('presence unavailable')
